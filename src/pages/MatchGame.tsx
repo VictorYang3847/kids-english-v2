@@ -13,14 +13,22 @@ interface Card {
   type: 'en' | 'cn';
   matched: boolean;
   selected: boolean;
-  matchedAnim: boolean;
+}
+
+interface WordPair {
+  wordId: string;
+  en: string;
+  cn: string;
+  matched: boolean;
+  selected: boolean;
 }
 
 export default function MatchGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
   const [timerMode, setTimerMode] = useState(false);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [firstCard, setFirstCard] = useState<string | null>(null);
+  const [pairs, setPairs] = useState<WordPair[]>([]);
+  const [selectedSide, setSelectedSide] = useState<'en' | 'cn' | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [matches, setMatches] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
@@ -29,14 +37,16 @@ export default function MatchGame() {
 
   const initGame = useCallback(() => {
     const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 6);
-    const newCards: Card[] = [];
-    shuffled.forEach((w) => {
-      newCards.push({ id: `${w.id}-en`, text: w.english, wordId: w.id, type: 'en', matched: false, selected: false, matchedAnim: false });
-      newCards.push({ id: `${w.id}-cn`, text: w.chinese, wordId: w.id, type: 'cn', matched: false, selected: false, matchedAnim: false });
-    });
-    newCards.sort(() => Math.random() - 0.5);
-    setCards(newCards);
-    setFirstCard(null);
+    const newPairs: WordPair[] = shuffled.map((w) => ({
+      wordId: w.id,
+      en: w.english,
+      cn: w.chinese,
+      matched: false,
+      selected: false,
+    }));
+    setPairs(newPairs);
+    setSelectedSide(null);
+    setSelectedId(null);
     setScore(0);
     setMatches(0);
     setTimeLeft(60);
@@ -58,50 +68,74 @@ export default function MatchGame() {
     return () => clearTimeout(timer);
   }, [timeLeft, timerMode, gameOver]);
 
-  const handleClick = (cardId: string) => {
+  const handleClick = (side: 'en' | 'cn', wordId: string) => {
     if (checking || gameOver) return;
-    const card = cards.find((c) => c.id === cardId);
-    if (!card || card.matched || card.selected) return;
+    const pair = pairs.find((p) => p.wordId === wordId);
+    if (!pair || pair.matched) return;
 
-    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, selected: true } : c)));
+    // If clicking the same side that's already selected, deselect
+    if (selectedSide === side && selectedId === wordId) {
+      setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, selected: false } : p)));
+      setSelectedSide(null);
+      setSelectedId(null);
+      return;
+    }
 
-    if (!firstCard) {
-      setFirstCard(cardId);
+    // If no first selection, select this one
+    if (!selectedSide) {
+      setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, selected: true } : p)));
+      setSelectedSide(side);
+      setSelectedId(wordId);
+      return;
+    }
+
+    // If same side, switch selection
+    if (selectedSide === side) {
+      setPairs((prev) => prev.map((p) =>
+        p.wordId === wordId ? { ...p, selected: true } : p.selected ? { ...p, selected: false } : p
+      ));
+      setSelectedId(wordId);
+      return;
+    }
+
+    // Different sides - check match
+    setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, selected: true } : p)));
+    setChecking(true);
+    const firstPair = pairs.find((p) => p.wordId === selectedId)!;
+
+    if (firstPair.wordId === wordId) {
+      // Match!
+      setTimeout(() => {
+        const word = words.find((w) => w.id === wordId);
+        if (word) speakWord(word.english, true);
+        playSound('match');
+        setPairs((prev) =>
+          prev.map((p) =>
+            p.wordId === wordId ? { ...p, matched: true, selected: false } : p
+          )
+        );
+        setScore((s) => s + 10);
+        setMatches((m) => m + 1);
+        addScore(10);
+        incrementCorrect();
+        setSelectedSide(null);
+        setSelectedId(null);
+        setChecking(false);
+      }, 300);
     } else {
-      setChecking(true);
-      const first = cards.find((c) => c.id === firstCard)!;
-      if (first.wordId === card.wordId && first.type !== card.type) {
-        // Match!
-        setTimeout(() => {
-          const word = words.find((w) => w.id === card.wordId);
-          if (word) speakWord(word.english, true);
-          playSound('match');
-          setCards((prev) =>
-            prev.map((c) =>
-              c.wordId === card.wordId ? { ...c, matched: true, matchedAnim: true } : c
-            )
-          );
-          setScore((s) => s + 10);
-          setMatches((m) => m + 1);
-          addScore(10);
-          incrementCorrect();
-          setFirstCard(null);
-          setChecking(false);
-        }, 300);
-      } else {
-        // No match
-        setTimeout(() => {
-          playSound('error');
-          setCards((prev) =>
-            prev.map((c) =>
-              c.id === cardId || c.id === firstCard ? { ...c, selected: false } : c
-            )
-          );
-          setScore((s) => s - 2);
-          setFirstCard(null);
-          setChecking(false);
-        }, 500);
-      }
+      // No match
+      setTimeout(() => {
+        playSound('error');
+        setPairs((prev) =>
+          prev.map((p) =>
+            (p.wordId === wordId || p.wordId === selectedId) ? { ...p, selected: false } : p
+          )
+        );
+        setScore((s) => s - 2);
+        setSelectedSide(null);
+        setSelectedId(null);
+        setChecking(false);
+      }, 500);
     }
   };
 
@@ -156,28 +190,49 @@ export default function MatchGame() {
           </div>
         )}
 
-        {/* Cards */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-          {cards.map((card) => (
-            <button
-              key={card.id}
-              onClick={() => handleClick(card.id)}
-              disabled={card.matched}
-              className={`relative aspect-square rounded-2xl shadow-lg transition-all duration-300 flex items-center justify-center text-center p-2 font-medium
-                ${card.matched
-                  ? 'animate-bounce-out opacity-0'
-                  : card.selected
-                  ? 'bg-yellow-300 scale-105'
-                  : 'bg-white/95 backdrop-blur hover:scale-105'
-                }
-                ${card.matchedAnim ? 'animate-success-pulse' : ''}
-              `}
-            >
-              <span className={card.type === 'en' ? 'text-lg' : 'text-base'}>
-                {card.text}
-              </span>
-            </button>
-          ))}
+        {/* Cards - Chinese on left, English on right */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Left column: Chinese */}
+          <div className="space-y-3">
+            <div className="text-center text-white font-bold text-sm mb-1">中文</div>
+            {pairs.map((pair) => (
+              <button
+                key={`${pair.wordId}-cn`}
+                onClick={() => handleClick('cn', pair.wordId)}
+                disabled={pair.matched}
+                className={`w-full rounded-2xl py-4 shadow-lg transition-all duration-300 text-center font-medium text-lg
+                  ${pair.matched ? 'opacity-0 pointer-events-none' : 'hover:scale-105'}
+                  ${pair.selected && selectedSide === 'cn' && selectedId === pair.wordId
+                    ? 'bg-yellow-400 scale-105'
+                    : 'bg-blue-500 text-white'
+                  }
+                `}
+              >
+                {pair.cn}
+              </button>
+            ))}
+          </div>
+
+          {/* Right column: English */}
+          <div className="space-y-3">
+            <div className="text-center text-white font-bold text-sm mb-1">English</div>
+            {pairs.map((pair) => (
+              <button
+                key={`${pair.wordId}-en`}
+                onClick={() => handleClick('en', pair.wordId)}
+                disabled={pair.matched}
+                className={`w-full rounded-2xl py-4 shadow-lg transition-all duration-300 text-center font-medium text-lg
+                  ${pair.matched ? 'opacity-0 pointer-events-none' : 'hover:scale-105'}
+                  ${pair.selected && selectedSide === 'en' && selectedId === pair.wordId
+                    ? 'bg-yellow-400 scale-105'
+                    : 'bg-amber-400 text-gray-800'
+                  }
+                `}
+              >
+                {pair.en}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Game Over */}

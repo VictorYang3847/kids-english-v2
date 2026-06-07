@@ -6,7 +6,7 @@ import { speakWord } from '../utils/audio';
 import { playSound } from '../utils/sounds';
 import { ArrowLeft } from 'lucide-react';
 
-type FillMode = 'full' | 'half' | 'few';
+type FillMode = 'full' | 'half' | 'few' | 'missing';
 type InputMode = 'keyboard' | 'click';
 
 export default function SpellingGame() {
@@ -21,6 +21,7 @@ export default function SpellingGame() {
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
   const [finished, setFinished] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasSpokenRef = useRef<Set<string>>(new Set());
 
   const initGame = useCallback(() => {
     const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 10);
@@ -31,6 +32,7 @@ export default function SpellingGame() {
     setResult(null);
     setFinished(false);
     setStarted(true);
+    hasSpokenRef.current.clear();
   }, []);
 
   useEffect(() => {
@@ -39,13 +41,42 @@ export default function SpellingGame() {
     }
   }, [currentQ, started, inputMode]);
 
+  // Pronounce word when question changes
+  useEffect(() => {
+    if (!started || finished) return;
+    const word = questionWords[currentQ];
+    if (!word || hasSpokenRef.current.has(word.id)) return;
+    hasSpokenRef.current.add(word.id);
+    speakWord(word.english, true);
+  }, [currentQ, started, finished, questionWords]);
+
   const checkAnswer = (overrideInput?: string) => {
     if (result) return;
     const word = questionWords[currentQ];
     const answer = (overrideInput ?? input).trim().toLowerCase();
-    if (answer === word.english.toLowerCase()) {
+
+    let correct: boolean;
+    if (fillMode === 'missing') {
+      // For missing mode, check each position in the missing mask
+      const mask = getMissingMask(word.english);
+      let idx = 0;
+      correct = true;
+      for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === '_') {
+          if (answer[idx] !== word.english[i].toLowerCase()) {
+            correct = false;
+            break;
+          }
+          idx++;
+        }
+      }
+    } else {
+      correct = answer === word.english.toLowerCase();
+    }
+
+    if (correct) {
       setResult('correct');
-      const pts = fillMode === 'full' ? 15 : fillMode === 'half' ? 12 : 10;
+      const pts = fillMode === 'full' ? 15 : fillMode === 'half' ? 12 : fillMode === 'few' ? 10 : 13;
       setScore((s) => s + pts);
       playSound('match');
       addScore(pts);
@@ -101,6 +132,9 @@ export default function SpellingGame() {
 
   const getHints = (word: string) => {
     if (fillMode === 'full') return '';
+    if (fillMode === 'missing') {
+      return getMissingMask(word);
+    }
     if (fillMode === 'half') {
       const len = Math.ceil(word.length / 2);
       return word.slice(0, len) + '_'.repeat(word.length - len);
@@ -109,6 +143,18 @@ export default function SpellingGame() {
       return word[0] + '_'.repeat(word.length - 2) + (word.length > 1 ? word[word.length - 1] : '');
     }
     return '';
+  };
+
+  const getMissingMask = (word: string) => {
+    const mask = word.split('');
+    const len = word.length;
+    let missingCount: number;
+    if (len <= 3) missingCount = 1;
+    else if (len <= 5) missingCount = 2;
+    else missingCount = Math.floor(len / 3);
+    const indices = Array.from({ length: len }, (_, i) => i).sort(() => Math.random() - 0.5).slice(0, missingCount);
+    indices.forEach((i) => { mask[i] = '_'; });
+    return mask.join('');
   };
 
   if (!started) {
@@ -132,7 +178,7 @@ export default function SpellingGame() {
             <div className="mb-6">
               <label className="text-sm font-medium text-gray-600 mb-2 block">难度模式</label>
               <div className="grid grid-cols-3 gap-2">
-                {([['full', '全写', '+15分'], ['half', '写一半', '+12分'], ['few', '写首尾', '+10分']] as [FillMode, string, string][]).map(([mode, label, pts]) => (
+                {([['full', '全写', '+15分'], ['half', '写一半', '+12分'], ['missing', '只写缺', '+13分'], ['few', '写首尾', '+10分']] as [FillMode, string, string][]).map(([mode, label, pts]) => (
                   <button key={mode} onClick={() => setFillMode(mode)} className={`py-2 rounded-xl font-medium text-xs transition-all ${fillMode === mode ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'}`}>{label}<br/>{pts}</button>
                 ))}
               </div>

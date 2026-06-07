@@ -115,15 +115,23 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Word Book */}
-        <div className="mt-6">
+        {/* Word Book & Sentence Book */}
+        <div className="mt-6 grid grid-cols-2 gap-3">
           <Link
-            to="/words"
+            to="/word-book"
             className="block bg-gradient-to-r from-purple-400 via-pink-400 to-red-500 rounded-2xl p-4 text-center shadow-xl hover:scale-105 transition-transform duration-300"
           >
             <div className="text-3xl mb-1">📚</div>
             <div className="text-xl font-bold text-white">单词本</div>
             <div className="text-white/80 text-sm">查看所有单词</div>
+          </Link>
+          <Link
+            to="/sentence-book"
+            className="block bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-500 rounded-2xl p-4 text-center shadow-xl hover:scale-105 transition-transform duration-300"
+          >
+            <div className="text-3xl mb-1">📝</div>
+            <div className="text-xl font-bold text-white">句子本</div>
+            <div className="text-white/80 text-sm">实用英文句子</div>
           </Link>
         </div>
 
