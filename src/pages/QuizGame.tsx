@@ -148,7 +148,6 @@ export default function QuizGame() {
                 disabled={!!selected}
                 className={`w-full rounded-2xl p-4 shadow-lg transition-all text-left flex items-center gap-4 ${bgClass} ${!selected ? 'hover:scale-[1.02]' : ''}`}
               >
-                <span className="text-3xl">{opt.emoji}</span>
                 <span className="text-xl font-bold flex-1">{opt.english}</span>
                 {selected && isCorrect && <span className="text-2xl">✅</span>}
                 {selected && isSelected && !isCorrect && <span className="text-2xl">❌</span>}

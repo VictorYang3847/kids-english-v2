@@ -39,10 +39,11 @@ export default function SpellingGame() {
     }
   }, [currentQ, started, inputMode]);
 
-  const checkAnswer = () => {
+  const checkAnswer = (overrideInput?: string) => {
     if (result) return;
     const word = questionWords[currentQ];
-    if (input.trim().toLowerCase() === word.english.toLowerCase()) {
+    const answer = (overrideInput ?? input).trim().toLowerCase();
+    if (answer === word.english.toLowerCase()) {
       setResult('correct');
       const pts = fillMode === 'full' ? 15 : fillMode === 'half' ? 12 : 10;
       setScore((s) => s + pts);
@@ -64,15 +65,22 @@ export default function SpellingGame() {
     }, 1500);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (result) return;
+    const val = e.target.value.replace(/[^a-zA-Z]/g, '').toLowerCase();
+    setInput(val);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (result || inputMode !== 'keyboard') return;
     if (e.key === 'Enter') {
-      checkAnswer();
-    } else if (e.key === 'Backspace') {
-      setInput((prev) => prev.slice(0, -1));
-    } else if (/^[a-zA-Z]$/.test(e.key)) {
-      setInput((prev) => prev + e.key.toLowerCase());
+      checkAnswer((e.target as HTMLInputElement).value);
     }
+  };
+
+  const handleConfirmAnswer = () => {
+    if (result) return;
+    checkAnswer();
   };
 
   const handleLetterClick = (letter: string) => {
@@ -156,7 +164,7 @@ export default function SpellingGame() {
   const display = hint || '_'.repeat(word.english.length);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-400 to-pink-500 p-4" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-400 to-pink-500 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <Link to="/" className="p-2 bg-white/30 backdrop-blur rounded-full">
@@ -179,12 +187,13 @@ export default function SpellingGame() {
                 ref={inputRef}
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
+                onKeyDown={handleInputKeyDown}
                 className="border-2 border-orange-300 rounded-xl px-4 py-3 text-center text-xl font-mono tracking-widest focus:outline-none focus:border-orange-500"
                 placeholder="输入单词..."
                 autoFocus
               />
-              <button onClick={checkAnswer} disabled={!!result} className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition-colors">确认</button>
+              <button onClick={handleConfirmAnswer} disabled={!!result} className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition-colors">确认</button>
             </div>
           ) : (
             <div>
@@ -198,7 +207,7 @@ export default function SpellingGame() {
               </div>
               <div className="flex gap-2">
                 <button onClick={handleBackspace} disabled={!!result} className="flex-1 bg-gray-200 rounded-xl py-3 font-bold text-gray-600 hover:bg-gray-300 transition-colors">删除</button>
-                <button onClick={checkAnswer} disabled={!!result} className="flex-1 bg-orange-500 text-white rounded-xl py-3 font-bold hover:bg-orange-600 transition-colors">确认</button>
+                <button onClick={handleConfirmAnswer} disabled={!!result} className="flex-1 bg-orange-500 text-white rounded-xl py-3 font-bold hover:bg-orange-600 transition-colors">确认</button>
               </div>
             </div>
           )}
