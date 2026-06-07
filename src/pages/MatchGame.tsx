@@ -242,12 +242,15 @@ export default function MatchGame() {
               {matches === 6 ? '恭喜完成！' : '时间到！'}
             </h2>
             <p className="text-gray-600 mb-4">得分：{score}分 | 配对：{matches}/6</p>
-            <button
-              onClick={initGame}
-              className="bg-gradient-to-r from-blue-400 to-cyan-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform"
-            >
-              再来一局
-            </button>
+            <div className="flex gap-3 justify-center">
+              <Link to="/" className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回首页</Link>
+              <button
+                onClick={initGame}
+                className="bg-gradient-to-r from-blue-400 to-cyan-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform"
+              >
+                再来一局
+              </button>
+            </div>
           </div>
         )}
       </div>

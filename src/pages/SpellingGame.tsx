@@ -20,6 +20,8 @@ export default function SpellingGame() {
   const [score, setScore] = useState(0);
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
   const [finished, setFinished] = useState(false);
+  // Store the missing mask for the current question so it doesn't change on re-render
+  const [missingMask, setMissingMask] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const hasSpokenRef = useRef<Set<string>>(new Set());
 
@@ -31,9 +33,21 @@ export default function SpellingGame() {
     setScore(0);
     setResult(null);
     setFinished(false);
-    setStarted(true);
+    setMissingMask('');
     hasSpokenRef.current.clear();
   }, []);
+
+  // Generate missing mask when question changes
+  useEffect(() => {
+    if (!started || finished) return;
+    const word = questionWords[currentQ];
+    if (!word) return;
+    if (fillMode === 'missing') {
+      setMissingMask(generateMissingMask(word.english));
+    } else {
+      setMissingMask('');
+    }
+  }, [currentQ, started, finished, fillMode]);
 
   useEffect(() => {
     if (started && inputMode === 'keyboard' && inputRef.current) {
@@ -50,6 +64,18 @@ export default function SpellingGame() {
     speakWord(word.english, true);
   }, [currentQ, started, finished, questionWords]);
 
+  const generateMissingMask = (word: string): string => {
+    const mask = word.split('');
+    const len = word.length;
+    let missingCount: number;
+    if (len <= 3) missingCount = 1;
+    else if (len <= 5) missingCount = 2;
+    else missingCount = Math.floor(len / 3);
+    const indices = Array.from({ length: len }, (_, i) => i).sort(() => Math.random() - 0.5).slice(0, missingCount);
+    indices.forEach((i) => { mask[i] = '_'; });
+    return mask.join('');
+  };
+
   const checkAnswer = (overrideInput?: string) => {
     if (result) return;
     const word = questionWords[currentQ];
@@ -57,18 +83,21 @@ export default function SpellingGame() {
 
     let correct: boolean;
     if (fillMode === 'missing') {
-      // For missing mode, check each position in the missing mask
-      const mask = getMissingMask(word.english);
+      // Check each position in the stored missing mask
+      const mask = missingMask;
       let idx = 0;
       correct = true;
       for (let i = 0; i < mask.length; i++) {
         if (mask[i] === '_') {
-          if (answer[idx] !== word.english[i].toLowerCase()) {
+          if (idx >= answer.length || answer[idx] !== word.english[i].toLowerCase()) {
             correct = false;
             break;
           }
           idx++;
         }
+      }
+      if (correct && idx !== answer.length) {
+        correct = false;
       }
     } else {
       correct = answer === word.english.toLowerCase();
@@ -133,7 +162,7 @@ export default function SpellingGame() {
   const getHints = (word: string) => {
     if (fillMode === 'full') return '';
     if (fillMode === 'missing') {
-      return getMissingMask(word);
+      return missingMask || generateMissingMask(word);
     }
     if (fillMode === 'half') {
       const len = Math.ceil(word.length / 2);
@@ -143,18 +172,6 @@ export default function SpellingGame() {
       return word[0] + '_'.repeat(word.length - 2) + (word.length > 1 ? word[word.length - 1] : '');
     }
     return '';
-  };
-
-  const getMissingMask = (word: string) => {
-    const mask = word.split('');
-    const len = word.length;
-    let missingCount: number;
-    if (len <= 3) missingCount = 1;
-    else if (len <= 5) missingCount = 2;
-    else missingCount = Math.floor(len / 3);
-    const indices = Array.from({ length: len }, (_, i) => i).sort(() => Math.random() - 0.5).slice(0, missingCount);
-    indices.forEach((i) => { mask[i] = '_'; });
-    return mask.join('');
   };
 
   if (!started) {
@@ -197,7 +214,10 @@ export default function SpellingGame() {
           <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-xl text-center">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">游戏结束！</h2>
             <p className="text-4xl font-bold text-orange-500 mb-2">{score}分</p>
-            <button onClick={initGame} className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">再来一局</button>
+            <div className="flex gap-3 justify-center">
+              <Link to="/" className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回首页</Link>
+              <button onClick={initGame} className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">再来一局</button>
+            </div>
           </div>
         </div>
       </div>

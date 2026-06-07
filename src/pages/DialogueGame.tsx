@@ -96,7 +96,10 @@ export default function DialogueGame() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">游戏结束！</h2>
             <p className="text-4xl font-bold text-blue-500 mb-2">{score}分</p>
             <p className="text-gray-500 mb-6">答对 {score / 10} / 10 题</p>
-            <button onClick={initGame} className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">再来一局</button>
+            <div className="flex gap-3 justify-center">
+              <Link to="/" className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回首页</Link>
+              <button onClick={initGame} className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">再来一局</button>
+            </div>
           </div>
         </div>
       </div>
