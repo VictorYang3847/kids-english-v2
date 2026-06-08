@@ -146,7 +146,7 @@ export default function SentenceFillGame() {
           </div>
           <div className="text-center text-sm text-gray-500">{q.item.chinese}</div>
           {!selected && (
-            <button onClick={() => speakWord(q.item.sentence.replace('___', q.item.blankWord))} className="mt-3 mx-auto block text-sm text-purple-500 hover:text-purple-700">
+            <button onClick={() => speakWord(q.item.sentence.replace('___', q.item.blankWord), true)} className="mt-3 mx-auto block text-sm text-purple-500 hover:text-purple-700">
               🔊 听句子
             </button>
           )}
