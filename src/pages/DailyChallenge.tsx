@@ -6,55 +6,120 @@ import { speakWord } from '../utils/audio';
 import { playSound } from '../utils/sounds';
 import { ArrowLeft } from 'lucide-react';
 
-// 7 game types: random pick one type per challenge
-const GAME_TYPES = ['match', 'listening', 'spelling', 'quiz', 'sentence-fill', 'dialogue', 'listen-match'] as const;
-type GameType = typeof GAME_TYPES[number];
+interface Card {
+  id: string;
+  wordId: string;
+  text: string;
+  emoji: string;
+  type: 'en' | 'cn';
+  selected: boolean;
+}
+
+interface LinePos {
+  x1: number; y1: number; x2: number; y2: number;
+}
 
 export default function DailyChallenge() {
   const { progress, addScore, incrementGames, incrementCorrect, recordDailyProgress, completeDailyChallenge } = useGameStore();
   const today = new Date().toISOString().split('T')[0];
   const alreadyCompleted = progress.dailyChallenge?.date === today && progress.dailyChallenge?.completed;
 
-  // Match game state
-  const [gameType, setGameType] = useState<GameType>('match');
-  const [pairs, setPairs] = useState<any[]>([]);
-  const [enOrder, setEnOrder] = useState<string[]>([]);
-  const [selectedSide, setSelectedSide] = useState<'en' | 'cn' | null>(null);
+  const [started, setStarted] = useState(false);
+  const [cards, setCards] = useState<Card[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [matches, setMatches] = useState(0);
   const [checking, setChecking] = useState(false);
   const [gameScore, setGameScore] = useState(0);
   const [finished, setFinished] = useState(false);
-  const [started, setStarted] = useState(false);
-
-  const hasSpokenRef = useRef<Set<string>>(new Set());
+  const [lines, setLines] = useState<LinePos[]>([]);
+  const [animatingCards, setAnimatingCards] = useState<Set<string>>(new Set());
+  const areaRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   const initGame = useCallback(() => {
-    const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 4); // 4 pairs for daily challenge (shorter)
-    const newPairs = shuffled.map((w) => ({
-      wordId: w.id,
-      en: w.english,
-      cn: w.chinese,
-      matched: false,
-      selected: false,
-    }));
-    const enIds = [...shuffled].sort(() => Math.random() - 0.5).map((w) => w.id);
-    setEnOrder(enIds);
-    setPairs(newPairs);
-    setSelectedSide(null);
+    const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 4);
+    const newCards: Card[] = [];
+    shuffled.forEach((w) => {
+      newCards.push({ id: `${w.id}-en`, wordId: w.id, text: w.english, emoji: w.emoji, type: 'en', selected: false });
+      newCards.push({ id: `${w.id}-cn`, wordId: w.id, text: w.chinese, emoji: '', type: 'cn', selected: false });
+    });
+    newCards.sort(() => Math.random() - 0.5);
+    setCards(newCards);
     setSelectedId(null);
     setMatches(0);
     setChecking(false);
     setGameScore(0);
     setFinished(false);
     setStarted(true);
-    hasSpokenRef.current.clear();
+    setLines([]);
+    setAnimatingCards(new Set());
+    cardRefs.current.clear();
   }, []);
 
-  useEffect(() => {
-    // Pick a random game type (always match for now, can be expanded)
-    setGameType('match');
+  const captureLine = useCallback((cardId1: string, cardId2: string): LinePos | null => {
+    const area = areaRef.current;
+    const el1 = cardRefs.current.get(cardId1);
+    const el2 = cardRefs.current.get(cardId2);
+    if (!area || !el1 || !el2) return null;
+    const areaRect = area.getBoundingClientRect();
+    const r1 = el1.getBoundingClientRect();
+    const r2 = el2.getBoundingClientRect();
+    return {
+      x1: r1.left + r1.width / 2 - areaRect.left,
+      y1: r1.top + r1.height / 2 - areaRect.top,
+      x2: r2.left + r2.width / 2 - areaRect.left,
+      y2: r2.top + r2.height / 2 - areaRect.top,
+    };
   }, []);
+
+  const handleClick = (cardId: string) => {
+    if (checking || finished) return;
+    const card = cards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    if (selectedId === cardId) {
+      setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, selected: false } : c)));
+      setSelectedId(null);
+      return;
+    }
+
+    if (!selectedId) {
+      setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, selected: true } : c)));
+      setSelectedId(cardId);
+      return;
+    }
+
+    const firstCard = cards.find((c) => c.id === selectedId)!;
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, selected: true } : c)));
+    setChecking(true);
+    const isMatch = firstCard.wordId === card.wordId && firstCard.type !== card.type;
+
+    setTimeout(() => {
+      if (isMatch) {
+        const word = words.find((w) => w.id === card.wordId);
+        if (word) speakWord(word.english, true);
+        playSound('match');
+        const line = captureLine(selectedId, cardId);
+        if (line) setLines((prev) => [...prev, line]);
+        setAnimatingCards((prev) => new Set(prev).add(selectedId).add(cardId));
+        setTimeout(() => {
+          setCards((prev) => prev.filter((c) => c.id !== selectedId && c.id !== cardId));
+          setAnimatingCards((prev) => { const n = new Set(prev); n.delete(selectedId); n.delete(cardId); return n; });
+        }, 500);
+        setGameScore((s) => s + 10);
+        setMatches((m) => m + 1);
+        addScore(10);
+        incrementCorrect();
+      } else {
+        playSound('error');
+        setCards((prev) => prev.map((c) =>
+          (c.id === selectedId || c.id === cardId) ? { ...c, selected: false } : c
+        ));
+      }
+      setSelectedId(null);
+      setChecking(false);
+    }, 400);
+  };
 
   useEffect(() => {
     if (started && matches === 4) {
@@ -66,64 +131,6 @@ export default function DailyChallenge() {
       recordDailyProgress(1, 4, gameScore + 50);
     }
   }, [matches, started]);
-
-  const handleClick = (side: 'en' | 'cn', wordId: string) => {
-    if (checking || finished) return;
-    const pair = pairs.find((p) => p.wordId === wordId);
-    if (!pair || pair.matched) return;
-
-    if (selectedSide === side && selectedId === wordId) {
-      setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, selected: false } : p)));
-      setSelectedSide(null);
-      setSelectedId(null);
-      return;
-    }
-
-    if (!selectedSide) {
-      setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, selected: true } : p)));
-      setSelectedSide(side);
-      setSelectedId(wordId);
-      return;
-    }
-
-    if (selectedSide === side) {
-      setPairs((prev) => prev.map((p) =>
-        p.wordId === wordId ? { ...p, selected: true } : p.selected ? { ...p, selected: false } : p
-      ));
-      setSelectedId(wordId);
-      return;
-    }
-
-    setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, selected: true } : p)));
-    setChecking(true);
-    const firstPair = pairs.find((p) => p.wordId === selectedId)!;
-
-    if (firstPair.wordId === wordId) {
-      setTimeout(() => {
-        const word = words.find((w) => w.id === wordId);
-        if (word) speakWord(word.english, true);
-        playSound('match');
-        setPairs((prev) => prev.map((p) => (p.wordId === wordId ? { ...p, matched: true, selected: false } : p)));
-        setGameScore((s) => s + 10);
-        setMatches((m) => m + 1);
-        addScore(10);
-        incrementCorrect();
-        setSelectedSide(null);
-        setSelectedId(null);
-        setChecking(false);
-      }, 300);
-    } else {
-      setTimeout(() => {
-        playSound('error');
-        setPairs((prev) => prev.map((p) =>
-          (p.wordId === wordId || p.wordId === selectedId) ? { ...p, selected: false } : p
-        ));
-        setSelectedSide(null);
-        setSelectedId(null);
-        setChecking(false);
-      }, 500);
-    }
-  };
 
   if (alreadyCompleted) {
     return (
@@ -154,10 +161,6 @@ export default function DailyChallenge() {
             <div className="text-6xl mb-4">🎯</div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">每日挑战</h1>
             <p className="text-gray-500 mb-6">完成配对挑战，获得额外 50 积分！</p>
-            <div className="bg-orange-50 rounded-xl p-4 mb-6">
-              <div className="text-sm text-gray-600 mb-1">挑战内容</div>
-              <div className="font-bold text-gray-800 text-lg">连连看 - 4 组配对</div>
-            </div>
             <button onClick={initGame} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">开始挑战</button>
           </div>
         </div>
@@ -183,7 +186,7 @@ export default function DailyChallenge() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 p-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-4">
           <Link to="/" className="p-2 bg-white/30 backdrop-blur rounded-full">
             <ArrowLeft className="w-6 h-6 text-white" />
@@ -192,50 +195,35 @@ export default function DailyChallenge() {
           <span className="bg-white/30 backdrop-blur rounded-full px-3 py-1 text-white font-bold">{matches} / 4</span>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div className="text-center text-white font-bold text-sm mb-1">中文</div>
-            {pairs.map((pair) => (
+        <div className="relative" ref={areaRef}>
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-20" style={{ overflow: 'visible' }}>
+            {lines.map((l, i) => (
+              <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                stroke="#4ade80" strokeWidth="4" strokeLinecap="round" className="animate-pulse" />
+            ))}
+          </svg>
+
+          <div className="grid grid-cols-4 gap-3">
+            {cards.map((card) => (
               <button
-                key={`${pair.wordId}-cn`}
-                onClick={() => handleClick('cn', pair.wordId)}
-                disabled={pair.matched}
-                className={`w-full rounded-2xl py-4 shadow-lg transition-all duration-300 text-center font-medium text-lg
-                  ${pair.matched ? 'opacity-0 pointer-events-none' : 'hover:scale-105'}
-                  ${pair.selected && selectedSide === 'cn' && selectedId === pair.wordId
-                    ? 'bg-blue-300 text-blue-900 ring-4 ring-blue-200 scale-105'
-                    : 'bg-blue-500 text-white'
+                key={card.id}
+                ref={(el) => { cardRefs.current.set(card.id, el); }}
+                onClick={() => handleClick(card.id)}
+                className={`relative rounded-2xl p-3 shadow-lg transition-all duration-300 text-center font-bold
+                  ${animatingCards.has(card.id)
+                    ? 'bg-green-400 scale-110 opacity-0 rotate-12'
+                    : card.selected
+                      ? 'bg-yellow-300 text-gray-800 scale-105 ring-4 ring-yellow-200 shadow-xl'
+                      : card.type === 'en'
+                        ? 'bg-amber-400 text-gray-800 hover:scale-105'
+                        : 'bg-blue-500 text-white hover:scale-105'
                   }
                 `}
               >
-                {pair.cn}
+                {card.emoji && <div className="text-3xl mb-1">{card.emoji}</div>}
+                <div className="text-sm font-bold break-words leading-tight">{card.text}</div>
               </button>
             ))}
-          </div>
-
-          <div className="space-y-3">
-            <div className="text-center text-white font-bold text-sm mb-1">English</div>
-            {enOrder.map((wordId) => {
-              const pair = pairs.find((p) => p.wordId === wordId);
-              if (!pair) return null;
-              return (
-                <button
-                  key={`${pair.wordId}-en`}
-                  onClick={() => handleClick('en', pair.wordId)}
-                  disabled={pair.matched}
-                  className={`w-full rounded-2xl py-4 shadow-lg transition-all duration-300 text-center font-medium text-lg
-                    ${pair.matched ? 'opacity-0 pointer-events-none' : 'hover:scale-105'}
-                    ${pair.selected && selectedSide === 'en' && selectedId === pair.wordId
-                      ? 'bg-amber-300 text-amber-900 ring-4 ring-amber-200 scale-105'
-                      : 'bg-amber-400 text-gray-800'
-                    }
-                  `}
-                >
-                  {pair.en}
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>

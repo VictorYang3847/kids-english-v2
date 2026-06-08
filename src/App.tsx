@@ -9,7 +9,6 @@ import DialogueGame from './pages/DialogueGame';
 import ListenMatchGame from './pages/ListenMatchGame';
 import WordBook from './pages/WordBook';
 import SentenceBook from './pages/SentenceBook';
-import DailyChallenge from './pages/DailyChallenge';
 
 export default function App() {
   return (
@@ -25,7 +24,6 @@ export default function App() {
         <Route path="/sentence-fill" element={<SentenceFillGame />} />
         <Route path="/dialogue" element={<DialogueGame />} />
         <Route path="/listen-match" element={<ListenMatchGame />} />
-        <Route path="/daily-challenge" element={<DailyChallenge />} />
       </Routes>
     </HashRouter>
   );
