@@ -5,14 +5,28 @@ import { Volume2, VolumeX } from 'lucide-react';
 
 const getToday = () => new Date().toISOString().split('T')[0];
 
+const GAME_TYPES = [
+  { name: '连连看', emoji: '🔗', path: '/match' },
+  { name: '听力', emoji: '🎧', path: '/listening' },
+  { name: '拼写', emoji: '✏️', path: '/spelling' },
+  { name: '看图选词', emoji: '🖼️', path: '/quiz' },
+  { name: '句子填空', emoji: '📝', path: '/sentence-fill' },
+  { name: '对话补全', emoji: '💬', path: '/dialogue' },
+  { name: '听句选句', emoji: '🎶', path: '/listen-match' },
+];
+
 export default function Home() {
   const { progress, toggleSound } = useGameStore();
   const todayRecord = progress.dailyRecords.find((r) => r.date === getToday());
   const dailyChallengeDone = progress.dailyChallenge?.date === getToday() && progress.dailyChallenge?.completed;
 
+  // Pick today's challenge game (deterministic based on date)
+  const todayIndex = new Date().getDate() % GAME_TYPES.length;
+  const todayChallenge = GAME_TYPES[todayIndex];
+
   const wordGames = [
     { path: '/match', name: '连连看', emoji: '🔗', desc: '匹配英文和中文' },
-    { path: '/listening', name: '听力', emoji: '', desc: '听音选词' },
+    { path: '/listening', name: '听力', emoji: '👂', desc: '听音选词' },
     { path: '/spelling', name: '拼写', emoji: '✏️', desc: '看中文写英文' },
     { path: '/quiz', name: '看图选词', emoji: '🖼️', desc: '看表情选单词' },
   ];
@@ -69,13 +83,16 @@ export default function Home() {
         <div className="mt-6">
           {dailyChallengeDone ? (
             <div className="bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl p-4 text-center shadow-lg">
+              <div className="text-3xl mb-1">🏆</div>
               <div className="text-xl font-bold text-white">每日挑战已完成！(+50积分)</div>
+              <div className="text-white/90 text-sm mt-1">明天再来挑战吧！</div>
             </div>
           ) : (
-            <div className="bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl p-4 text-center shadow-lg">
+            <Link to="/daily-challenge" className="block bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl p-4 text-center shadow-lg hover:scale-105 transition-transform">
+              <div className="text-3xl mb-1">🎯</div>
               <div className="text-lg font-bold text-white mb-1">每日挑战</div>
-              <div className="text-white/90 text-sm">完成任意游戏获得额外 50 积分！</div>
-            </div>
+              <div className="text-white/90 text-sm">今天挑战：{todayChallenge.emoji} {todayChallenge.name} - 完成后获得额外 50 积分！</div>
+            </Link>
           )}
         </div>
 
