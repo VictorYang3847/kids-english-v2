@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
 import { words, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
@@ -11,6 +11,7 @@ type InputMode = 'keyboard' | 'click';
 
 export default function SpellingGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const category = searchParams.get('category') || 'all';
   const [fillMode, setFillMode] = useState<FillMode>('full');
@@ -182,9 +183,9 @@ export default function SpellingGame() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-400 to-pink-500 p-4 flex items-center justify-center">
         <div className="max-w-md w-full">
-          <Link to="/" className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-6">
+          <button onClick={() => navigate(`/practice?category=${category}`)} className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-6">
             <ArrowLeft className="w-6 h-6 text-white" />
-          </Link>
+          </button>
           <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-xl">
             <h1 className="text-2xl font-bold text-gray-800 text-center mb-2">拼写</h1>
             <p className="text-gray-500 text-center mb-6">看中文意思，拼写英文单词</p>
@@ -219,7 +220,7 @@ export default function SpellingGame() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">游戏结束！</h2>
             <p className="text-4xl font-bold text-orange-500 mb-2">{score}分</p>
             <div className="flex gap-3 justify-center">
-              <Link to="/" className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回首页</Link>
+              <button onClick={() => navigate(`/practice?category=${category}`)} className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回</button>
               <button onClick={initGame} className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">再来一局</button>
             </div>
           </div>
@@ -237,9 +238,9 @@ export default function SpellingGame() {
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-400 to-pink-500 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <Link to="/" className="p-2 bg-white/30 backdrop-blur rounded-full">
+          <button onClick={() => navigate(`/practice?category=${category}`)} className="p-2 bg-white/30 backdrop-blur rounded-full">
             <ArrowLeft className="w-6 h-6 text-white" />
-          </Link>
+          </button>
           <span className="bg-white/30 backdrop-blur rounded-full px-3 py-1 text-white font-bold">{currentQ + 1} / 10</span>
           <span className="bg-white/30 backdrop-blur rounded-full px-3 py-1 text-white font-bold">{score}分</span>
         </div>

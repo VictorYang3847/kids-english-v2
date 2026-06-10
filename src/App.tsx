@@ -19,7 +19,7 @@ export default function App() {
         <Route path="/match" element={<MatchGame />} />
         <Route path="/word-book" element={<WordBook />} />
         <Route path="/sentence-book" element={<SentenceBook />} />
-        <Route path="/practice/:gamePath?" element={<WordPracticeHub />} />
+        <Route path="/practice" element={<WordPracticeHub />} />
         <Route path="/listening" element={<ListeningGame />} />
         <Route path="/spelling" element={<SpellingGame />} />
         <Route path="/quiz" element={<QuizGame />} />
