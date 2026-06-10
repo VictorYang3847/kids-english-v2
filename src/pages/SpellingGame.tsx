@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
-import { words } from '../utils/words';
+import { words, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
 import { playSound } from '../utils/sounds';
 import { ArrowLeft } from 'lucide-react';
@@ -11,6 +11,8 @@ type InputMode = 'keyboard' | 'click';
 
 export default function SpellingGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get('category') || 'all';
   const [fillMode, setFillMode] = useState<FillMode>('full');
   const [inputMode, setInputMode] = useState<InputMode>('keyboard');
   const [started, setStarted] = useState(false);
@@ -26,7 +28,8 @@ export default function SpellingGame() {
   const hasSpokenRef = useRef<Set<string>>(new Set());
 
   const initGame = useCallback(() => {
-    const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 10);
+    const pool = category === 'all' ? [...words] : [...words.filter((w) => category.split(',').includes(w.category))];
+    const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 10);
     setQuestionWords(shuffled);
     setCurrentQ(0);
     setInput('');

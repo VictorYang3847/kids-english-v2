@@ -9,12 +9,7 @@ export default function Home() {
   const { progress, toggleSound } = useGameStore();
   const todayRecord = progress.dailyRecords.find((r) => r.date === getToday());
 
-  const wordGames = [
-    { path: '/match', name: '连连看', emoji: '🔗', desc: '匹配英文和中文' },
-    { path: '/listening', name: '听力', emoji: '👂', desc: '听音选词' },
-    { path: '/spelling', name: '拼写', emoji: '✏️', desc: '看中文写英文' },
-    { path: '/quiz', name: '看图选词', emoji: '🖼️', desc: '看表情选单词' },
-  ];
+  const wordPractice = { path: '/practice', name: '单词练习', emoji: '📖', desc: '连连看 / 听力 / 拼写 / 看图选词' };
 
   const sentenceGames = [
     { path: '/sentence-fill', name: '句子填空', emoji: '', desc: '选择单词填空' },
@@ -64,22 +59,22 @@ export default function Home() {
           </div>
         )}
 
-        {/* Word Games */}
+        {/* Word Practice Hub */}
         <div className="mt-6">
           <h2 className="text-xl font-bold text-white mb-3">📖 单词练习</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {wordGames.map((game) => (
-              <Link
-                key={game.path}
-                to={game.path}
-                className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-xl hover:scale-105 transition-transform duration-300"
-              >
-                <div className="text-3xl mb-2">{game.emoji}</div>
-                <div className="text-lg font-bold text-gray-800">{game.name}</div>
-                <div className="text-sm text-gray-500">{game.desc}</div>
-              </Link>
-            ))}
-          </div>
+          <Link
+            to={wordPractice.path}
+            className="block bg-white/95 backdrop-blur rounded-2xl p-6 shadow-xl hover:scale-105 transition-transform duration-300"
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">{wordPractice.emoji}</div>
+              <div>
+                <div className="text-xl font-bold text-gray-800">{wordPractice.name}</div>
+                <div className="text-sm text-gray-500">{wordPractice.desc}</div>
+                <div className="text-xs text-gray-400 mt-1">选择分类后开始游戏</div>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* Sentence Games */}

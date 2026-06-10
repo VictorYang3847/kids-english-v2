@@ -9,6 +9,7 @@ import DialogueGame from './pages/DialogueGame';
 import ListenMatchGame from './pages/ListenMatchGame';
 import WordBook from './pages/WordBook';
 import SentenceBook from './pages/SentenceBook';
+import WordPracticeHub from './pages/WordPracticeHub';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/match" element={<MatchGame />} />
         <Route path="/word-book" element={<WordBook />} />
         <Route path="/sentence-book" element={<SentenceBook />} />
+        <Route path="/practice/:gamePath?" element={<WordPracticeHub />} />
         <Route path="/listening" element={<ListeningGame />} />
         <Route path="/spelling" element={<SpellingGame />} />
         <Route path="/quiz" element={<QuizGame />} />

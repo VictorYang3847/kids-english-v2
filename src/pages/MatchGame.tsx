@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
-import { words } from '../utils/words';
+import { words, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
 import { playSound } from '../utils/sounds';
 import { ArrowLeft } from 'lucide-react';
@@ -27,6 +27,9 @@ const LEVELS = [
 
 export default function MatchGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get('category') || 'all';
+  const gameWords = category === 'all' ? words : words.filter((w) => category.split(',').includes(w.category));
   const [level, setLevel] = useState(0);
   const [started, setStarted] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
@@ -48,7 +51,7 @@ export default function MatchGame() {
   const initGame = useCallback((lv?: number) => {
     const lvl = lv ?? level;
     const cfg = LEVELS[lvl];
-    const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, cfg.pairs);
+    const shuffled = [...gameWords].sort(() => Math.random() - 0.5).slice(0, cfg.pairs);
 
     const newCards: Card[] = [];
     shuffled.forEach((w) => {
@@ -212,7 +215,7 @@ export default function MatchGame() {
           <Link to="/" className="p-2 bg-white/30 backdrop-blur rounded-full">
             <ArrowLeft className="w-6 h-6 text-white" />
           </Link>
-          <h1 className="text-xl font-bold text-white">{currentLevel.name}</h1>
+          <h1 className="text-xl font-bold text-white">{currentLevel.name}{category !== 'all' ? ` · ${categoryNames[category] || ''}` : ''}</h1>
           <div className="flex items-center gap-3">
             <span className="bg-white/30 backdrop-blur rounded-full px-3 py-1 text-white font-bold">{score}分</span>
             <span className={`rounded-full px-3 py-1 font-bold ${timeLeft <= 10 ? 'bg-red-500' : 'bg-white/30 backdrop-blur'}`}>{timeLeft}s</span>
