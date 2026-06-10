@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
 import { words, Word, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
@@ -15,6 +15,7 @@ interface Question {
 
 export default function ListeningGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const category = searchParams.get('category') || 'all';
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
@@ -90,9 +91,9 @@ export default function ListeningGame() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 p-4 flex items-center justify-center">
         <div className="max-w-md w-full">
-          <Link to="/" className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-6">
+          <button onClick={() => navigate(`/practice?category=${category}`)} className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-6">
             <ArrowLeft className="w-6 h-6 text-white" />
-          </Link>
+          </button>
           <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-xl">
             <h1 className="text-2xl font-bold text-gray-800 text-center mb-2">听力</h1>
             <p className="text-gray-500 text-center mb-6">听发音，选择正确的单词</p>
@@ -132,7 +133,7 @@ export default function ListeningGame() {
             <p className="text-4xl font-bold text-green-500 mb-2">{score}分</p>
             <p className="text-gray-500 mb-6">答对 {score / 10} / 10 题</p>
             <div className="flex gap-3 justify-center">
-              <Link to="/" className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回首页</Link>
+              <button onClick={() => navigate(`/practice?category=${category}`)} className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回</button>
               <button
                 onClick={initGame}
                 className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform"
@@ -153,9 +154,9 @@ export default function ListeningGame() {
     <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <Link to="/" className="p-2 bg-white/30 backdrop-blur rounded-full">
+          <button onClick={() => navigate(`/practice?category=${category}`)} className="p-2 bg-white/30 backdrop-blur rounded-full">
             <ArrowLeft className="w-6 h-6 text-white" />
-          </Link>
+          </button>
           <span className="bg-white/30 backdrop-blur rounded-full px-3 py-1 text-white font-bold">
             {currentQ + 1} / 10
           </span>

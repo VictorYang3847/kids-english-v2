@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { words, categoryNames, categoryEmojis } from '../utils/words';
 import { ArrowLeft } from 'lucide-react';
 
@@ -13,10 +13,20 @@ const GAMES = [
 ];
 
 function WordPracticeHub() {
-  const navigate = useNavigate();
-  const { gamePath } = useParams<{ gamePath: string }>();
-  const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set());
-  const game = GAMES.find((g) => g.path === `/${gamePath}`);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialize selectedCats from URL params
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(() => {
+    const cat = searchParams.get('category');
+    if (!cat || cat === 'all') return new Set();
+    return new Set(cat.split(','));
+  });
+
+  // Sync URL params when selectedCats changes
+  useEffect(() => {
+    const catParam = selectedCats.size > 0 ? Array.from(selectedCats).join(',') : 'all';
+    setSearchParams({ category: catParam }, { replace: true });
+  }, [selectedCats]);
 
   const toggleCat = (cat: string) => {
     setSelectedCats((prev) => {
@@ -41,15 +51,11 @@ function WordPracticeHub() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-cyan-400 to-teal-500 p-4">
       <div className="max-w-md mx-auto">
-        <Link to={game ? '/practice' : '/'} className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-4">
+        <Link to="/" className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-4">
           <ArrowLeft className="w-6 h-6 text-white" />
         </Link>
-        <h1 className="text-2xl font-bold text-white text-center mb-2">
-          {game ? `${game.emoji} ${game.name}` : '单词练习'}
-        </h1>
-        <p className="text-white/80 text-center mb-6">
-          {game ? `选择要练习的单词分类 (${catCount}个单词)` : '选择游戏类型'}
-        </p>
+        <h1 className="text-2xl font-bold text-white text-center mb-2">单词练习</h1>
+        <p className="text-white/80 text-center mb-6">选择要练习的单词分类 ({catCount}个单词)</p>
 
         {/* Category chips - multi-select */}
         <div className="flex flex-wrap gap-2 justify-center mb-6">
@@ -69,25 +75,17 @@ function WordPracticeHub() {
           })}
         </div>
 
-        {!game && (
-          <div className="grid grid-cols-2 gap-3">
-            {GAMES.map((g) => (
-              <Link key={g.path} to={`/practice/${g.path.slice(1)}`}
-                className={`bg-gradient-to-r ${g.bg} rounded-xl p-4 text-center shadow-lg hover:scale-105 transition-transform`}>
-                <div className="text-3xl mb-1">{g.emoji}</div>
-                <div className="text-white font-bold">{g.name}</div>
-                <div className="text-white/80 text-xs">{g.desc}</div>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {game && (
-          <button onClick={() => navigate(`${game.path}?category=${catParam}`)}
-            className={`w-full bg-gradient-to-r ${game.bg} text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:scale-105 transition-transform`}>
-            开始练习
-          </button>
-        )}
+        {/* Game cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {GAMES.map((g) => (
+            <Link key={g.path} to={`${g.path}?category=${catParam}`}
+              className={`bg-gradient-to-r ${g.bg} rounded-xl p-4 text-center shadow-lg hover:scale-105 transition-transform`}>
+              <div className="text-3xl mb-1">{g.emoji}</div>
+              <div className="text-white font-bold">{g.name}</div>
+              <div className="text-white/80 text-xs">{g.desc}</div>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
 import { words, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
@@ -27,6 +27,7 @@ const LEVELS = [
 
 export default function MatchGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const category = searchParams.get('category') || 'all';
   const gameWords = category === 'all' ? words : words.filter((w) => category.split(',').includes(w.category));
@@ -188,7 +189,7 @@ export default function MatchGame() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-400 via-cyan-400 to-teal-500 p-4 flex items-center justify-center">
         <div className="max-w-md w-full">
-          <Link to="/" className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-6">
+          <Link to={`/practice?category=${category}`} className="inline-flex p-2 bg-white/30 backdrop-blur rounded-full mb-6">
             <ArrowLeft className="w-6 h-6 text-white" />
           </Link>
           <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-xl">
@@ -212,9 +213,9 @@ export default function MatchGame() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <Link to="/" className="p-2 bg-white/30 backdrop-blur rounded-full">
+          <button onClick={() => navigate(`/practice?category=${category}`)} className="p-2 bg-white/30 backdrop-blur rounded-full">
             <ArrowLeft className="w-6 h-6 text-white" />
-          </Link>
+          </button>
           <h1 className="text-xl font-bold text-white">{currentLevel.name}{category !== 'all' ? ` · ${categoryNames[category] || ''}` : ''}</h1>
           <div className="flex items-center gap-3">
             <span className="bg-white/30 backdrop-blur rounded-full px-3 py-1 text-white font-bold">{score}分</span>
@@ -267,7 +268,7 @@ export default function MatchGame() {
               <h2 className="text-2xl font-bold text-gray-800 mb-2">{matches === currentLevel.pairs ? '恭喜通关！' : '时间到！'}</h2>
               <p className="text-gray-600 mb-4">得分：{score}分 | 配对：{matches}/{currentLevel.pairs}</p>
               <div className="flex gap-3 justify-center flex-wrap">
-                <Link to="/" className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回首页</Link>
+                <button onClick={() => navigate(`/practice?category=${category}`)} className="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-400 transition-colors">返回</button>
                 {matches === currentLevel.pairs && level < 2 && (
                   <button onClick={() => initGame(level + 1)} className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">下一关</button>
                 )}
