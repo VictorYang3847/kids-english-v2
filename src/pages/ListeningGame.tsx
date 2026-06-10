@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
-import { words, Word } from '../utils/words';
+import { words, Word, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
 import { playSound } from '../utils/sounds';
 import { ArrowLeft, Volume2 } from 'lucide-react';
@@ -15,6 +15,8 @@ interface Question {
 
 export default function ListeningGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get('category') || 'all';
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [started, setStarted] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -24,9 +26,11 @@ export default function ListeningGame() {
   const [finished, setFinished] = useState(false);
 
   const getFilteredWords = (d: Difficulty) => {
-    if (d === 'easy') return words.filter((w) => w.english.length <= 4);
-    if (d === 'medium') return words.filter((w) => w.english.length <= 6);
-    return words;
+    let filtered = words;
+    if (category !== 'all') filtered = filtered.filter((w) => category.split(',').includes(w.category));
+    if (d === 'easy') return filtered.filter((w) => w.english.length <= 4);
+    if (d === 'medium') return filtered.filter((w) => w.english.length <= 6);
+    return filtered;
   };
 
   const initGame = useCallback(() => {

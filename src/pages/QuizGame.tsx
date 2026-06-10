@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../hooks/useGameStore';
-import { words } from '../utils/words';
+import { words, categoryNames } from '../utils/words';
 import { speakWord } from '../utils/audio';
 import { playSound } from '../utils/sounds';
 import { ArrowLeft } from 'lucide-react';
 
 export default function QuizGame() {
   const { addScore, incrementGames, incrementCorrect, recordDailyProgress } = useGameStore();
+  const [searchParams] = useSearchParams();
+  const category = searchParams.get('category') || 'all';
   const [started, setStarted] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
@@ -17,7 +19,8 @@ export default function QuizGame() {
   const [finished, setFinished] = useState(false);
 
   const initGame = useCallback(() => {
-    const shuffled = [...words].sort(() => Math.random() - 0.5);
+    const pool = category === 'all' ? [...words] : [...words.filter((w) => category.split(',').includes(w.category))];
+    const shuffled = pool.sort(() => Math.random() - 0.5);
     const qs = shuffled.slice(0, 10).map((word) => {
       const others = shuffled.filter((w) => w.id !== word.id).slice(0, 2);
       const options = [...others, word].sort(() => Math.random() - 0.5);
